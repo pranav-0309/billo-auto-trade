@@ -15,6 +15,11 @@ export default tseslint.config(
           message:
             'Hardcoded "MetaTrader 5" is forbidden. Use the PLATFORM_LABEL env var (PRD §8.5).',
         },
+        {
+          selector: 'TemplateLiteral[quasis.0.value.cooked="MetaTrader 5"][expressions.length=0]',
+          message:
+            'Hardcoded "MetaTrader 5" is forbidden. Use the PLATFORM_LABEL env var (PRD §8.5).',
+        },
       ],
     },
   },
