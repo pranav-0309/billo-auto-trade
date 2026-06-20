@@ -16,20 +16,20 @@
 
 ### Files Created in M0
 
-| Path                       | Responsibility                                                       |
-| -------------------------- | -------------------------------------------------------------------- |
-| `.gitignore`               | Exclude build artifacts, env files, logs, OS junk, Railway cache     |
-| `package.json`             | npm scripts, ESM type, engines, runtime + dev dependencies           |
-| `tsconfig.json`            | Strict TS, ES2022 target, NodeNext modules, excludes `**/*.test.ts`  |
-| `eslint.config.js`         | Flat config: JS recommended + TS recommended + MetaTrader 5 ban + Prettier compat |
-| `.prettierrc.json`         | Prettier defaults (single quotes, trailing commas)                   |
-| `.prettierignore`          | Prettier skip paths (dist, node_modules, coverage)                   |
-| `vitest.config.ts`         | Vitest config — `passWithNoTests: true`, v8 coverage configured      |
-| `.nvmrc`                   | Node 20 version pin                                                  |
-| `.editorconfig`            | 2-space indent, LF, UTF-8, trim trailing whitespace                  |
-| `.env.example`             | Env var template (committed; real `.env` is gitignored)              |
-| `src/util/logger.ts`       | The only M0 production code — pino logger reading LOG_LEVEL + TZ      |
-| `README.md`                | One-liner, prereqs, quickstart, "Status: pre-implementation" banner  |
+| Path                 | Responsibility                                                                    |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `.gitignore`         | Exclude build artifacts, env files, logs, OS junk, Railway cache                  |
+| `package.json`       | npm scripts, ESM type, engines, runtime + dev dependencies                        |
+| `tsconfig.json`      | Strict TS, ES2022 target, NodeNext modules, excludes `**/*.test.ts`               |
+| `eslint.config.js`   | Flat config: JS recommended + TS recommended + MetaTrader 5 ban + Prettier compat |
+| `.prettierrc.json`   | Prettier defaults (single quotes, trailing commas)                                |
+| `.prettierignore`    | Prettier skip paths (dist, node_modules, coverage)                                |
+| `vitest.config.ts`   | Vitest config — `passWithNoTests: true`, v8 coverage configured                   |
+| `.nvmrc`             | Node 20 version pin                                                               |
+| `.editorconfig`      | 2-space indent, LF, UTF-8, trim trailing whitespace                               |
+| `.env.example`       | Env var template (committed; real `.env` is gitignored)                           |
+| `src/util/logger.ts` | The only M0 production code — pino logger reading LOG_LEVEL + TZ                  |
+| `README.md`          | One-liner, prereqs, quickstart, "Status: pre-implementation" banner               |
 
 ### Files NOT Created (Deferred)
 
@@ -43,14 +43,17 @@
 ## Task 1: Create `.gitignore`
 
 **Files:**
+
 - Create: `.gitignore`
 
 - [ ] **Step 1: Verify the repo is initialized**
 
 Run from repo root:
+
 ```bash
 git status
 ```
+
 Expected: output shows "On branch main" with "docs/" as a tracked change (since brainstorming committed the spec) and "nothing else to commit" after we add files.
 
 If git is not initialized, run `git init -b main` first.
@@ -75,16 +78,20 @@ coverage/
 - [ ] **Step 3: Verify `.gitignore` is parsed correctly**
 
 Run:
+
 ```bash
 git check-ignore -v node_modules dist/.env .env.example
 ```
+
 Expected output (one line per path that IS ignored):
+
 ```
 .gitignore:1:node_modules/    node_modules
 .gitignore:2:dist/    dist/.env
 .gitignore:3:.env    .env
 .gitignore:7:coverage/    coverage
 ```
+
 The `.env.example` line should NOT appear (it is explicitly un-ignored).
 
 - [ ] **Step 4: Commit**
@@ -99,6 +106,7 @@ rtk git commit -m "chore: add .gitignore (node_modules, dist, env, logs, OS junk
 ## Task 2: Initialize `package.json` and install dependencies
 
 **Files:**
+
 - Create: `package.json`
 
 - [ ] **Step 1: Create `package.json`**
@@ -146,6 +154,7 @@ Create the file `package.json` at the repo root with this exact content:
 ```
 
 Notes on what the engineer should know:
+
 - Versions are pinned to current stable majors as of late 2024; npm install will pick the latest compatible.
 - `node-pg-migrate` is intentionally NOT installed yet — M1 adds it.
 - `dev` and `start` scripts are configured per PRD §6.1 but will not succeed until M7 adds `src/index.ts`. This is expected and is not an M0 acceptance criterion.
@@ -153,17 +162,21 @@ Notes on what the engineer should know:
 - [ ] **Step 2: Install dependencies**
 
 Run:
+
 ```bash
 npm install
 ```
+
 Expected: completes with `added N packages` and exits 0. `node_modules/` and `package-lock.json` are created. `node_modules/` is ignored by git (Task 1's `.gitignore`).
 
 - [ ] **Step 3: Verify the lockfile is generated**
 
 Run:
+
 ```bash
 Test-Path package-lock.json
 ```
+
 Expected: `True`.
 
 - [ ] **Step 4: Commit**
@@ -178,6 +191,7 @@ rtk git commit -m "chore: add package.json with toolchain + pino deps"
 ## Task 3: Configure TypeScript
 
 **Files:**
+
 - Create: `tsconfig.json`
 
 - [ ] **Step 1: Create `tsconfig.json`**
@@ -212,9 +226,11 @@ Create the file `tsconfig.json` at the repo root with this exact content:
 - [ ] **Step 2: Verify TypeScript accepts the config**
 
 Run:
+
 ```bash
 npx tsc --showConfig
 ```
+
 Expected: prints a JSON dump of the resolved config and exits 0. There are no `.ts` files yet, so `tsc -p tsconfig.json` would be a no-op — `--showConfig` is the cleanest verification at this stage.
 
 - [ ] **Step 3: Commit**
@@ -229,6 +245,7 @@ rtk git commit -m "chore: add strict tsconfig.json (ES2022, NodeNext)"
 ## Task 4: Implement `src/util/logger.ts` and verify build
 
 **Files:**
+
 - Create: `src/util/logger.ts`
 
 - [ ] **Step 1: Create the file with this exact content**
@@ -264,6 +281,7 @@ export default logger;
 ```
 
 Why this shape:
+
 - Reads `LOG_LEVEL` and `TZ` directly from `process.env`. The zod-validated env loader lands in M1; M0 deliberately does not introduce it.
 - Default `TZ` is `Asia/Dubai` per PRD §8.6 (canonical default).
 - Custom `timestamp` formats in the configured TZ so logs render in Asia/Dubai by default.
@@ -272,37 +290,47 @@ Why this shape:
 - [ ] **Step 2: Verify TypeScript compiles**
 
 Run:
+
 ```bash
 npm run build
 ```
+
 Expected: exits 0 with no output (or `tsc`'s normal compilation summary on larger projects).
 
 - [ ] **Step 3: Verify the built artifact exists**
 
 Run (PowerShell on Windows):
+
 ```powershell
 Test-Path dist/util/logger.js
 ```
+
 Expected: `True`.
 
 If using bash:
+
 ```bash
 ls -la dist/util/logger.js
 ```
+
 Expected: file exists, non-zero size.
 
 - [ ] **Step 4: Sanity-check the built logger runs**
 
 Run (PowerShell on Windows):
+
 ```powershell
 node -e "import('./dist/util/logger.js').then(m => m.default.info('m0 smoke')).catch(e => { console.error(e); process.exit(1); })"
 ```
+
 Expected: a single JSON line is printed to stdout containing `"msg":"m0 smoke"` and a `time` field in `DD/MM/YYYY, HH:MM:SS` format (Asia/Dubai by default).
 
 If using bash:
+
 ```bash
 node --input-type=module -e "import('./dist/util/logger.js').then(m => m.default.info('m0 smoke'))"
 ```
+
 Expected: same — one JSON line with `"msg":"m0 smoke"`.
 
 - [ ] **Step 5: Commit**
@@ -317,6 +345,7 @@ rtk git commit -m "feat: add pino logger with LOG_LEVEL + TZ (default Asia/Dubai
 ## Task 5: Configure Prettier
 
 **Files:**
+
 - Create: `.prettierrc.json`
 - Create: `.prettierignore`
 
@@ -348,9 +377,11 @@ coverage
 - [ ] **Step 3: Verify Prettier accepts the config and finds nothing to format**
 
 Run:
+
 ```bash
 npx prettier --check .
 ```
+
 Expected: prints "Checking formatting..." and exits 0. (All files currently tracked in git are JSON/config files written by us — Prettier should be happy.)
 
 - [ ] **Step 4: Commit**
@@ -365,6 +396,7 @@ rtk git commit -m "chore: add prettier config and ignore paths"
 ## Task 6: Configure ESLint (flat) with "MetaTrader 5" ban
 
 **Files:**
+
 - Create: `eslint.config.js`
 
 - [ ] **Step 1: Create `eslint.config.js`**
@@ -400,6 +432,7 @@ export default tseslint.config(
 ```
 
 Notes for the engineer:
+
 - We use the `typescript-eslint` meta-package which re-exports the parser and plugin — cleaner than importing them separately.
 - `tseslint.config(...)` is the flat-config helper from `typescript-eslint` v8.
 - `prettier` (the compat package) is spread last to disable ESLint stylistic rules that conflict with Prettier.
@@ -408,9 +441,11 @@ Notes for the engineer:
 - [ ] **Step 2: Verify ESLint runs clean**
 
 Run:
+
 ```bash
 npm run lint
 ```
+
 Expected: exits 0 with no errors. `src/util/logger.ts` should be linted successfully.
 
 - [ ] **Step 3: Manually verify the "MetaTrader 5" ban works**
@@ -425,10 +460,13 @@ echo 'const _banProbe = "MetaTrader 5";' >> src/util/logger.ts
 ```
 
 Run:
+
 ```bash
 npm run lint
 ```
+
 Expected: exits non-zero with an error message containing the rule message:
+
 > `Hardcoded "MetaTrader 5" is forbidden. Use the PLATFORM_LABEL env var (PRD §8.5).`
 
 Revert the probe:
@@ -442,6 +480,7 @@ Verify the revert worked:
 ```bash
 npm run lint
 ```
+
 Expected: exits 0 again.
 
 - [ ] **Step 4: Commit**
@@ -456,6 +495,7 @@ rtk git commit -m "chore: add eslint flat config with MetaTrader 5 ban"
 ## Task 7: Configure Vitest
 
 **Files:**
+
 - Create: `vitest.config.ts`
 
 - [ ] **Step 1: Create `vitest.config.ts`**
@@ -483,17 +523,21 @@ Why `passWithNoTests: true`: M0 ships zero test files (tests land in M1 and M2).
 - [ ] **Step 2: Verify Vitest runs green with zero tests**
 
 Run:
+
 ```bash
 npm test
 ```
+
 Expected: exits 0. Vitest should print a message indicating no test files were found (e.g., `"No test files found, exiting with code 0"`) and exit cleanly.
 
 - [ ] **Step 3: Verify Vitest coverage toolchain is wired**
 
 Run:
+
 ```bash
 npx vitest run --coverage
 ```
+
 Expected: exits 0. Since there are no test files, coverage output should be empty (no source files reported) but the toolchain itself must not error.
 
 - [ ] **Step 4: Commit**
@@ -508,6 +552,7 @@ rtk git commit -m "chore: add vitest config (passWithNoTests, v8 coverage)"
 ## Task 8: Create meta files (`.nvmrc`, `.editorconfig`, `.env.example`)
 
 **Files:**
+
 - Create: `.nvmrc`
 - Create: `.editorconfig`
 - Create: `.env.example`
@@ -574,6 +619,7 @@ TZ=Asia/Dubai
 ```
 
 Notes:
+
 - `TELEGRAM_ADMIN_USER_ID` is commented out because it is optional in v1 (PRD §19 #5).
 - `TZ=Asia/Dubai` follows the canonical PRD default (resolves a copy-paste error in PRD §21.2).
 - Empty values signal "owner must supply".
@@ -581,11 +627,14 @@ Notes:
 - [ ] **Step 4: Verify `.env.example` is tracked but `.env` is not**
 
 Run:
+
 ```bash
 git check-ignore -v .env
 git status --short .env.example
 ```
+
 Expected:
+
 - The first command prints a `.gitignore:3:.env  .env` line (proving `.env` is ignored).
 - The second command prints nothing (the file is not modified — it's already tracked from this commit).
 
@@ -601,6 +650,7 @@ rtk git commit -m "chore: add .nvmrc, .editorconfig, .env.example"
 ## Task 9: Create `README.md`
 
 **Files:**
+
 - Create: `README.md`
 
 - [ ] **Step 1: Create `README.md`**
@@ -669,9 +719,11 @@ See `docs/superpowers/specs/` for design specs produced during brainstorming.
 - [ ] **Step 2: Render the README to verify Markdown is well-formed**
 
 Run (PowerShell):
+
 ```powershell
 Get-Content README.md | Select-Object -First 5
 ```
+
 Expected: prints the title, blank line, blockquote, blank line, "**Status:** ..." line, blank line, `## Prerequisites` line.
 
 - [ ] **Step 3: Commit**
@@ -692,10 +744,13 @@ This task runs all M0 acceptance criteria from the design spec and confirms they
 - [ ] **Step 1: Run the toolchain green check**
 
 Run:
+
 ```bash
 npm run lint && npm test && npm run build
 ```
+
 Expected: all three exit 0. Output should show:
+
 - ESLint: clean
 - Vitest: "No test files found" but exits 0
 - TypeScript: builds `dist/util/logger.js`
@@ -703,57 +758,72 @@ Expected: all three exit 0. Output should show:
 - [ ] **Step 2: Verify the "MetaTrader 5" ban still works after all changes**
 
 Append a probe literal:
+
 ```bash
 echo '' >> src/util/logger.ts
 echo 'const _banProbe = "MetaTrader 5";' >> src/util/logger.ts
 ```
 
 Run:
+
 ```bash
 npm run lint
 ```
+
 Expected: exits non-zero with the rule message.
 
 Revert:
+
 ```bash
 rtk git checkout -- src/util/logger.ts
 ```
 
 Confirm revert:
+
 ```bash
 npm run lint
 ```
+
 Expected: exits 0.
 
 - [ ] **Step 3: Verify folder layout**
 
 Run (PowerShell):
+
 ```powershell
 Test-Path src, sql, scripts, docs
 ```
+
 Expected: `True` for each.
 
 If using bash:
+
 ```bash
 test -d src && test -d sql && test -d scripts && test -d docs && echo OK
 ```
+
 Expected: prints `OK`.
 
 - [ ] **Step 4: Verify `.gitignore` is in place**
 
 Run:
+
 ```bash
 git check-ignore -v node_modules dist/.env coverage
 ```
+
 Expected: at least one line per path, all starting with `.gitignore:`.
 
 - [ ] **Step 5: Verify git history**
 
 Run:
+
 ```bash
 rtk git log --oneline
 ```
+
 Expected: 8 commits beyond the brainstorming commit:
+
 1. `chore: add .gitignore (node_modules, dist, env, logs, OS junk)`
 2. `chore: add package.json with toolchain + pino deps`
 3. `chore: add strict tsconfig.json (ES2022, NodeNext)`
@@ -776,23 +846,23 @@ If every step above passed, M0 is complete. Hand off to M1 (Database schema & re
 
 ### 1. Spec coverage
 
-| Spec section / requirement                            | Task(s) implementing it |
-| ----------------------------------------------------- | ----------------------- |
-| Goal & scope (logger only)                            | Task 4                  |
-| Folder layout                                         | Tasks 1–9 collectively  |
-| `package.json` scripts (§6.1)                         | Task 2                  |
-| `tsconfig.json` (strict, ES2022, NodeNext)            | Task 3                  |
-| `eslint.config.js` (flat, with MetaTrader 5 ban)      | Task 6                  |
-| `.prettierrc.json` + `.prettierignore`                | Task 5                  |
-| `vitest.config.ts`                                    | Task 7                  |
-| `.gitignore`                                          | Task 1                  |
-| `.nvmrc`                                              | Task 8                  |
-| `.editorconfig`                                       | Task 8                  |
-| `.env.example`                                        | Task 8                  |
-| `src/util/logger.ts`                                  | Task 4                  |
-| `README.md`                                           | Task 9                  |
-| All 8 acceptance criteria from spec §6                | Task 10                 |
-| PRD deltas (no `test/`, TZ default, Procfile deferral)| Tasks 1, 4, 7 (no Procfile created) |
+| Spec section / requirement                             | Task(s) implementing it             |
+| ------------------------------------------------------ | ----------------------------------- |
+| Goal & scope (logger only)                             | Task 4                              |
+| Folder layout                                          | Tasks 1–9 collectively              |
+| `package.json` scripts (§6.1)                          | Task 2                              |
+| `tsconfig.json` (strict, ES2022, NodeNext)             | Task 3                              |
+| `eslint.config.js` (flat, with MetaTrader 5 ban)       | Task 6                              |
+| `.prettierrc.json` + `.prettierignore`                 | Task 5                              |
+| `vitest.config.ts`                                     | Task 7                              |
+| `.gitignore`                                           | Task 1                              |
+| `.nvmrc`                                               | Task 8                              |
+| `.editorconfig`                                        | Task 8                              |
+| `.env.example`                                         | Task 8                              |
+| `src/util/logger.ts`                                   | Task 4                              |
+| `README.md`                                            | Task 9                              |
+| All 8 acceptance criteria from spec §6                 | Task 10                             |
+| PRD deltas (no `test/`, TZ default, Procfile deferral) | Tasks 1, 4, 7 (no Procfile created) |
 
 No gaps.
 

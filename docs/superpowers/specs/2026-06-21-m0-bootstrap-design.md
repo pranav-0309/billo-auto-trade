@@ -65,14 +65,14 @@ billo-auto-trade/
 - **Scripts** (verbatim per PRD §6.1):
   ```json
   {
-    "build":       "tsc -p tsconfig.json",
-    "start":       "node dist/index.js",
-    "dev":         "tsx watch src/index.ts",
-    "lint":        "eslint .",
-    "format":      "prettier --write .",
-    "test":        "vitest run",
-    "test:watch":  "vitest",
-    "db:migrate":  "node-pg-migrate up",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "node-pg-migrate up",
     "db:rollback": "node-pg-migrate down"
   }
   ```
@@ -224,7 +224,7 @@ TZ=Asia/Dubai
 
 Sections required by PRD M0:
 
-- One-liner: *"Telegram → MetaTrader 5 trade signal copier. Watches one Telegram channel, parses signals, places trades on a VT Markets MT5 account via MetaAPI. v1 is autonomous, demo-only, 0.01 lot, TP1-only."*
+- One-liner: _"Telegram → MetaTrader 5 trade signal copier. Watches one Telegram channel, parses signals, places trades on a VT Markets MT5 account via MetaAPI. v1 is autonomous, demo-only, 0.01 lot, TP1-only."_
 - **"Status: pre-implementation (M0 — repo bootstrap & tooling)"** banner
 - Prerequisites: Node.js ≥ 20, npm ≥ 10
 - Quickstart: `npm install`, `cp .env.example .env`, `npm run dev` (with a note that `dev` is a no-op until M7)
@@ -270,21 +270,21 @@ export default logger;
 
 - Reads `LOG_LEVEL` and `TZ` directly from `process.env`. The zod-validated env loader is M1's job — M0 deliberately does not introduce it.
 - Default `TZ` is `Asia/Dubai` per PRD §8.6 (the canonical default).
-- Custom `timestamp` function formats in the configured TZ, satisfying PRD §8.6: *"the pino logger … render in this zone."* In dev with `pino-pretty`, this still parses cleanly. In prod with raw JSON to stdout, the `time` field is human-readable in the configured TZ.
+- Custom `timestamp` function formats in the configured TZ, satisfying PRD §8.6: _"the pino logger … render in this zone."_ In dev with `pino-pretty`, this still parses cleanly. In prod with raw JSON to stdout, the `time` field is human-readable in the configured TZ.
 - `en-GB` locale is used because its `toLocaleString` output is unambiguously `DD/MM/YYYY, HH:MM:SS` regardless of OS locale settings.
 
 ---
 
 ## 5. PRD Deltas Resolved During Brainstorming
 
-| PRD location                    | PRD says                            | Resolved as                        | Reason                                                                 |
-| ------------------------------- | ----------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| M0 "Folder layout"              | includes `test/`                    | drop `test/`; tests colocated      | Owner chose colocated in Q1; matches PRD §11.1 (`src/parser/parse.test.ts`) and §16 |
-| PRD §21.2 line 742 (Railway env)| `TZ=UTC`                            | `TZ=Asia/Dubai`                    | PRD header, §8.6, §19.8 all say `Asia/Dubai`; line 742 was a copy-paste error |
-| PRD §6.1 "Repo bootstrap"       | includes `Procfile` and `railway.json` | deferred to M8                  | `Procfile`'s `release: npm run db:migrate` would fail with no migrations yet (M1 introduces those); M8 owns deploy config |
-| M0 acceptance ("no-op codebase")| implied empty repo                  | `logger.ts` is the only code       | `tsc` needs at least one `.ts` file in `src/`; pino is the smallest thing that earns its keep and is explicitly listed in M0's features |
-| M0 acceptance (test files)      | silent on tests                     | zero tests in M0                   | First tests land with env loader (M1) and parser (M2); Vitest exits 0 with no matches |
-| Scripts `dev` / `start`         | listed in §6.1 bootstrap            | configured but won't run until M7  | Per §6.1; `npm run dev` requires `src/index.ts` which is M7's composition root |
+| PRD location                     | PRD says                               | Resolved as                       | Reason                                                                                                                                  |
+| -------------------------------- | -------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| M0 "Folder layout"               | includes `test/`                       | drop `test/`; tests colocated     | Owner chose colocated in Q1; matches PRD §11.1 (`src/parser/parse.test.ts`) and §16                                                     |
+| PRD §21.2 line 742 (Railway env) | `TZ=UTC`                               | `TZ=Asia/Dubai`                   | PRD header, §8.6, §19.8 all say `Asia/Dubai`; line 742 was a copy-paste error                                                           |
+| PRD §6.1 "Repo bootstrap"        | includes `Procfile` and `railway.json` | deferred to M8                    | `Procfile`'s `release: npm run db:migrate` would fail with no migrations yet (M1 introduces those); M8 owns deploy config               |
+| M0 acceptance ("no-op codebase") | implied empty repo                     | `logger.ts` is the only code      | `tsc` needs at least one `.ts` file in `src/`; pino is the smallest thing that earns its keep and is explicitly listed in M0's features |
+| M0 acceptance (test files)       | silent on tests                        | zero tests in M0                  | First tests land with env loader (M1) and parser (M2); Vitest exits 0 with no matches                                                   |
+| Scripts `dev` / `start`          | listed in §6.1 bootstrap               | configured but won't run until M7 | Per §6.1; `npm run dev` requires `src/index.ts` which is M7's composition root                                                          |
 
 ---
 
@@ -292,16 +292,16 @@ export default logger;
 
 Run from a clean clone:
 
-| # | Check                                                | Command                                                    | Expected                                                |
-| - | ---------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
-| 1 | Fresh install works                                  | `npm install`                                              | exits 0                                                 |
-| 2 | Lint is clean                                        | `npm run lint`                                             | exits 0                                                 |
-| 3 | Test runs (no tests yet)                             | `npm test`                                                 | exits 0 with "No test files found" message              |
-| 4 | Build produces `dist/`                               | `npm run build`                                            | exits 0, `dist/util/logger.js` exists                   |
-| 5 | All three green in one shot                          | `npm run lint && npm test && npm run build`                | exits 0                                                 |
-| 6 | "MetaTrader 5" ban works                             | append literal `"MetaTrader 5"` to `src/util/logger.ts`, run `npm run lint`, then `git checkout -- src/util/logger.ts` | lint **fails** with custom error; after revert, exits 0 |
-| 7 | Folder layout exists                                 | `Test-Path src, sql, scripts, docs`                        | all exist                                               |
-| 8 | `.env.example` is committed; `.env` is ignored       | `git status`                                               | `.env.example` tracked, `.env` not tracked              |
+| #   | Check                                          | Command                                                                                                                | Expected                                                |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 1   | Fresh install works                            | `npm install`                                                                                                          | exits 0                                                 |
+| 2   | Lint is clean                                  | `npm run lint`                                                                                                         | exits 0                                                 |
+| 3   | Test runs (no tests yet)                       | `npm test`                                                                                                             | exits 0 with "No test files found" message              |
+| 4   | Build produces `dist/`                         | `npm run build`                                                                                                        | exits 0, `dist/util/logger.js` exists                   |
+| 5   | All three green in one shot                    | `npm run lint && npm test && npm run build`                                                                            | exits 0                                                 |
+| 6   | "MetaTrader 5" ban works                       | append literal `"MetaTrader 5"` to `src/util/logger.ts`, run `npm run lint`, then `git checkout -- src/util/logger.ts` | lint **fails** with custom error; after revert, exits 0 |
+| 7   | Folder layout exists                           | `Test-Path src, sql, scripts, docs`                                                                                    | all exist                                               |
+| 8   | `.env.example` is committed; `.env` is ignored | `git status`                                                                                                           | `.env.example` tracked, `.env` not tracked              |
 
 ---
 

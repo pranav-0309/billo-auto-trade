@@ -12,7 +12,7 @@
 
 Build a small automation service that watches a single Telegram channel in which one admin posts trading signals, parses the signals, and places corresponding trades on a **MetaTrader 5** terminal logged in to a **VT Markets** account.
 
-The service runs unattended, has no manual confirmation step, and uses a fixed **0.01 lot** size on a **demo account** for v1. All incoming signals, parse results, trade attempts, fills, and errors are persisted to a **PostgreSQL** database. After every attempt, the service sends a Telegram notification back to the owner containing the parsed trade details and a generic platform label (e.g. *"MT5"*) that is **not hard-coded** in the message template.
+The service runs unattended, has no manual confirmation step, and uses a fixed **0.01 lot** size on a **demo account** for v1. All incoming signals, parse results, trade attempts, fills, and errors are persisted to a **PostgreSQL** database. After every attempt, the service sends a Telegram notification back to the owner containing the parsed trade details and a generic platform label (e.g. _"MT5"_) that is **not hard-coded** in the message template.
 
 v1 handles **one take-profit level (TP1)** per signal. v2 will extend the same trade to multiple take-profits (TP1/TP2/TP3 with the same stop-loss and lot size, modeled as three child orders).
 
@@ -53,28 +53,28 @@ v1 handles **one take-profit level (TP1)** per signal. v2 will extend the same t
 
 ### 3.2 Use cases
 
-| ID  | Use case                                                                                                        |
-| --- | --------------------------------------------------------------------------------------------------------------- |
-| U1  | Admin posts a BUY signal for EURUSD with SL + TP1. Tool places a 0.01 BUY on EURUSD within ~1 s.               |
-| U2  | Admin posts a SELL signal for GBPJPY. Tool places a 0.01 SELL on GBPJPY with the parsed SL and TP1.            |
-| U3  | A non-admin user posts in the channel. Tool ignores it (defence in depth).                                      |
-| U4  | A message does not match the signal format. Tool logs it as "unparseable" and notifies the owner.               |
+| ID  | Use case                                                                                                         |
+| --- | ---------------------------------------------------------------------------------------------------------------- |
+| U1  | Admin posts a BUY signal for EURUSD with SL + TP1. Tool places a 0.01 BUY on EURUSD within ~1 s.                 |
+| U2  | Admin posts a SELL signal for GBPJPY. Tool places a 0.01 SELL on GBPJPY with the parsed SL and TP1.              |
+| U3  | A non-admin user posts in the channel. Tool ignores it (defence in depth).                                       |
+| U4  | A message does not match the signal format. Tool logs it as "unparseable" and notifies the owner.                |
 | U5  | A message matches the format but is missing one field (e.g. SL). Tool does **not** trade and notifies the owner. |
-| U6  | MT5 is disconnected. Tool buffers the signal, retries connection, and reports status to the owner.              |
-| U7  | Telegram is disconnected. Tool reconnects automatically and resumes listening.                                 |
+| U6  | MT5 is disconnected. Tool buffers the signal, retries connection, and reports status to the owner.               |
+| U7  | Telegram is disconnected. Tool reconnects automatically and resumes listening.                                   |
 
 ---
 
 ## 4. Glossary
 
-| Term           | Meaning                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Signal**     | A Telegram message from the admin that follows the canonical format (see §7).                                 |
-| **Admin**      | The single Telegram user allowed to post in the monitored channel. Their `user_id` is whitelisted in config. |
-| **Parse OK**   | All four required fields (direction, pair, SL, TP1) extracted and validated.                                  |
-| **Trade**      | A single market order placed via the MT5 integration with the parsed parameters and the configured lot size. |
-| **Notification** | A Telegram message sent from the bot to the owner's chat with a summary of the signal and outcome.          |
-| **MT5**        | MetaTrader 5 terminal, in this case provided by VT Markets.                                                   |
+| Term             | Meaning                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Signal**       | A Telegram message from the admin that follows the canonical format (see §7).                                |
+| **Admin**        | The single Telegram user allowed to post in the monitored channel. Their `user_id` is whitelisted in config. |
+| **Parse OK**     | All four required fields (direction, pair, SL, TP1) extracted and validated.                                 |
+| **Trade**        | A single market order placed via the MT5 integration with the parsed parameters and the configured lot size. |
+| **Notification** | A Telegram message sent from the bot to the owner's chat with a summary of the signal and outcome.           |
+| **MT5**          | MetaTrader 5 terminal, in this case provided by VT Markets.                                                  |
 
 ---
 
@@ -113,21 +113,21 @@ All components run as **a single Node.js / TypeScript process** in v1. Splitting
 
 ## 6. Tech Stack
 
-| Layer                   | Choice                                                | Why                                                                                          |
-| ----------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Language                | **TypeScript (Node.js ≥ 20, ESM)**                    | User preference; rich ecosystem for Telegram clients.                                        |
-| Hosting                 | **Railway** (web service, single region)              | User choice. Runs the long-lived listener; auto-restart on crash; built-in log aggregation.  |
-| Telegram client         | **Telegraf** if the channel accepts bots, else **GramJS (telegram-mtproto)** with a user session | Bot API is simpler; private channels may require a user session. See §13.                    |
-| MT5 bridge              | **MetaAPI** (cloud, official Node SDK `metaapi.cloud-sdk`) as the **recommended** path. Fallback: local **MetaTrader5 Python package** invoked via subprocess, or a tiny MT5 EA exposing HTTP via WebRequest. | TypeScript-native; no need to keep a Windows MT5 terminal logged in 24/7. See §14.            |
-| Database                | **Railway Postgres** (managed PostgreSQL 15+)         | User choice. `DATABASE_URL` is auto-injected by Railway when the Postgres service is linked. |
-| Schema migrations       | **`node-pg-migrate`**, run automatically on deploy   | Lightweight, SQL-first, reversible. See §21.4.                                               |
-| Logging                 | **`pino`** → stdout (Railway captures and aggregates) | No logrotate needed; Railway persists logs in the dashboard.                                 |
-| Config                  | **`.env` locally** / **Railway Variables** in prod. Loaded via `dotenv` + a typed config module (`zod`). | Same code path in both environments.                                                         |
-| Process supervisor      | **Railway's built-in restart policy** (`NUM_WORKERS=1`, `restartPolicyType=ON_FAILURE`) | No `pm2` / `systemd` needed.                                                                 |
-| Health check            | Minimal **Express** HTTP server on `PORT` exposing `GET /health` | Required by Railway to mark the service healthy; also exposes status of Telegram and MT5 connections. |
-| Testing                 | **Vitest** + **nock** for HTTP mocks                  | Fast TS-native test runner.                                                                  |
-| Lint / format           | **ESLint** (flat config) + **Prettier**               | Standard.                                                                                    |
-| Notifications (outbound)| Same Telegraf/GramJS client as the listener, but the bot DMs the owner. | One dependency, one Telegram identity.                                                       |
+| Layer                    | Choice                                                                                                                                                                                                        | Why                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Language                 | **TypeScript (Node.js ≥ 20, ESM)**                                                                                                                                                                            | User preference; rich ecosystem for Telegram clients.                                                 |
+| Hosting                  | **Railway** (web service, single region)                                                                                                                                                                      | User choice. Runs the long-lived listener; auto-restart on crash; built-in log aggregation.           |
+| Telegram client          | **Telegraf** if the channel accepts bots, else **GramJS (telegram-mtproto)** with a user session                                                                                                              | Bot API is simpler; private channels may require a user session. See §13.                             |
+| MT5 bridge               | **MetaAPI** (cloud, official Node SDK `metaapi.cloud-sdk`) as the **recommended** path. Fallback: local **MetaTrader5 Python package** invoked via subprocess, or a tiny MT5 EA exposing HTTP via WebRequest. | TypeScript-native; no need to keep a Windows MT5 terminal logged in 24/7. See §14.                    |
+| Database                 | **Railway Postgres** (managed PostgreSQL 15+)                                                                                                                                                                 | User choice. `DATABASE_URL` is auto-injected by Railway when the Postgres service is linked.          |
+| Schema migrations        | **`node-pg-migrate`**, run automatically on deploy                                                                                                                                                            | Lightweight, SQL-first, reversible. See §21.4.                                                        |
+| Logging                  | **`pino`** → stdout (Railway captures and aggregates)                                                                                                                                                         | No logrotate needed; Railway persists logs in the dashboard.                                          |
+| Config                   | **`.env` locally** / **Railway Variables** in prod. Loaded via `dotenv` + a typed config module (`zod`).                                                                                                      | Same code path in both environments.                                                                  |
+| Process supervisor       | **Railway's built-in restart policy** (`NUM_WORKERS=1`, `restartPolicyType=ON_FAILURE`)                                                                                                                       | No `pm2` / `systemd` needed.                                                                          |
+| Health check             | Minimal **Express** HTTP server on `PORT` exposing `GET /health`                                                                                                                                              | Required by Railway to mark the service healthy; also exposes status of Telegram and MT5 connections. |
+| Testing                  | **Vitest** + **nock** for HTTP mocks                                                                                                                                                                          | Fast TS-native test runner.                                                                           |
+| Lint / format            | **ESLint** (flat config) + **Prettier**                                                                                                                                                                       | Standard.                                                                                             |
+| Notifications (outbound) | Same Telegraf/GramJS client as the listener, but the bot DMs the owner.                                                                                                                                       | One dependency, one Telegram identity.                                                                |
 
 ### 6.1 Repo bootstrap
 
@@ -147,15 +147,15 @@ Recommended `npm` scripts:
 ```json
 {
   "scripts": {
-    "build":      "tsc -p tsconfig.json",
-    "start":      "node dist/index.js",
-    "dev":        "tsx watch src/index.ts",
-    "lint":       "eslint .",
-    "format":     "prettier --write .",
-    "test":       "vitest run",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "node-pg-migrate up",
-    "db:rollback":"node-pg-migrate down"
+    "db:rollback": "node-pg-migrate down"
   }
 }
 ```
@@ -213,12 +213,12 @@ Execution Price: 1.0735
 
 ### 7.3 Required fields for v1
 
-| Field       | Source line                    | Notes                                                                |
-| ----------- | ------------------------------ | -------------------------------------------------------------------- |
+| Field       | Source line                     | Notes                                                                |
+| ----------- | ------------------------------- | -------------------------------------------------------------------- |
 | `direction` | First line, `🔼BUY` or `🔽SELL` | Buy ↔ SELL uppercase. Case-sensitive match.                          |
 | `pair`      | Same line as direction          | 6 uppercase letters, e.g. `EURUSD`, `GBPJPY`. No slash in v1 source. |
-| `sl`        | `🔴 SL:`                       | Decimal number, 4–5 fraction digits.                                |
-| `tp1`       | `🟢 TP1:`                      | Decimal number, 4–5 fraction digits.                                 |
+| `sl`        | `🔴 SL:`                        | Decimal number, 4–5 fraction digits.                                 |
+| `tp1`       | `🟢 TP1:`                       | Decimal number, 4–5 fraction digits.                                 |
 
 Fields **not** required in v1 but parsed and stored if present:
 
@@ -242,7 +242,7 @@ Fields **not** required in v1 but parsed and stored if present:
 const RE_HEADER = /^\s*(?:🔼BUY|🔽SELL)\s+([A-Z]{6})\s*$/m;
 
 // Stop loss
-const RE_SL  = /🔴\s*SL\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
+const RE_SL = /🔴\s*SL\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
 
 // Take profit 1 (and 2/3 captured for v2)
 const RE_TP1 = /🟢\s*TP1\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
@@ -310,28 +310,28 @@ These will be unit-tested against the canonical examples and a battery of negati
 
 All configuration is read from environment variables. Required vs. optional is shown below.
 
-| Variable                       | Required | Default          | Description                                                                 |
-| ------------------------------ | -------- | ---------------- | --------------------------------------------------------------------------- |
-| `DATABASE_URL`                 | yes      | —                | Postgres connection string. **On Railway this is auto-injected** when the Postgres service is linked — do not set it manually in the Railway dashboard. Locally, put it in `.env`. |
-| `TELEGRAM_API_ID`              | yes (GramJS only) | —      | my.telegram.org app credentials.                                            |
-| `TELEGRAM_API_HASH`            | yes (GramJS only) | —      | my.telegram.org app credentials.                                            |
-| `TELEGRAM_SESSION_STRING`      | yes (GramJS only) | —      | Pre-generated MTProto session string.                                      |
-| `TELEGRAM_BOT_TOKEN`           | yes (Telegraf only) | —    | Bot token from @BotFather (only if using a bot, see §13).                   |
-| `TELEGRAM_CHANNEL_ID`          | yes      | —                | Channel id (`-100…`) or `@username` of the signal channel.                  |
-| `TELEGRAM_ADMIN_USER_ID`       | no       | unset (no filter) | If set, the service filters out non-admin senders. **Optional in v1** — the channel's own permissions already guarantee only the admin can post, so this is defence-in-depth only. |
-| `TELEGRAM_OWNER_CHAT_ID`       | yes      | —                | Chat id the notifications are sent to.                                      |
-| `PLATFORM_LABEL`               | no       | `MT5`            | Generic platform label used in notifications. **Not** "MetaTrader 5".       |
-| `LOT_SIZE`                     | no       | `0.01`           | Trade volume.                                                               |
-| `MAGIC_NUMBER`                 | no       | `778899`         | Magic id stamped on every order.                                            |
-| `MT5_LOGIN`                    | yes      | —                | VT Markets MT5 account number.                                              |
-| `MT5_PASSWORD`                 | yes      | —                | MT5 password.                                                               |
-| `MT5_SERVER`                   | yes      | —                | Broker server name, e.g. `VTMarkets-Demo`.                                  |
-| `MT5_INTEGRATION`              | no       | `metaapi`        | One of `metaapi`, `python-bridge`, `mt5-webrequest`. See §14.               |
-| `METAAPI_TOKEN`                | yes (metaapi) | —              | metaapi.cloud API token.                                                    |
-| `METAAPI_ACCOUNT_ID`           | yes (metaapi) | —              | metaapi.cloud provisioned account id.                                       |
-| `DRY_RUN`                      | no       | `false`          | If `true`, parse + log + notify, but **do not** call MT5. Useful for warm-up.|
-| `LOG_LEVEL`                    | no       | `info`           | `trace` / `debug` / `info` / `warn` / `error`.                              |
-| `TZ`                           | no       | `Asia/Dubai`     | Timezone used for all timestamps in logs and notifications. The signal channel operates on Dubai time (UTC+4); all DB timestamps are still stored as UTC (`timestamptz`), but the pino logger and notification formatter render in this zone. **Trade execution is always immediate on message receipt** — this setting does not delay or schedule anything. |
+| Variable                  | Required            | Default           | Description                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------- | ------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`            | yes                 | —                 | Postgres connection string. **On Railway this is auto-injected** when the Postgres service is linked — do not set it manually in the Railway dashboard. Locally, put it in `.env`.                                                                                                                                                                           |
+| `TELEGRAM_API_ID`         | yes (GramJS only)   | —                 | my.telegram.org app credentials.                                                                                                                                                                                                                                                                                                                             |
+| `TELEGRAM_API_HASH`       | yes (GramJS only)   | —                 | my.telegram.org app credentials.                                                                                                                                                                                                                                                                                                                             |
+| `TELEGRAM_SESSION_STRING` | yes (GramJS only)   | —                 | Pre-generated MTProto session string.                                                                                                                                                                                                                                                                                                                        |
+| `TELEGRAM_BOT_TOKEN`      | yes (Telegraf only) | —                 | Bot token from @BotFather (only if using a bot, see §13).                                                                                                                                                                                                                                                                                                    |
+| `TELEGRAM_CHANNEL_ID`     | yes                 | —                 | Channel id (`-100…`) or `@username` of the signal channel.                                                                                                                                                                                                                                                                                                   |
+| `TELEGRAM_ADMIN_USER_ID`  | no                  | unset (no filter) | If set, the service filters out non-admin senders. **Optional in v1** — the channel's own permissions already guarantee only the admin can post, so this is defence-in-depth only.                                                                                                                                                                           |
+| `TELEGRAM_OWNER_CHAT_ID`  | yes                 | —                 | Chat id the notifications are sent to.                                                                                                                                                                                                                                                                                                                       |
+| `PLATFORM_LABEL`          | no                  | `MT5`             | Generic platform label used in notifications. **Not** "MetaTrader 5".                                                                                                                                                                                                                                                                                        |
+| `LOT_SIZE`                | no                  | `0.01`            | Trade volume.                                                                                                                                                                                                                                                                                                                                                |
+| `MAGIC_NUMBER`            | no                  | `778899`          | Magic id stamped on every order.                                                                                                                                                                                                                                                                                                                             |
+| `MT5_LOGIN`               | yes                 | —                 | VT Markets MT5 account number.                                                                                                                                                                                                                                                                                                                               |
+| `MT5_PASSWORD`            | yes                 | —                 | MT5 password.                                                                                                                                                                                                                                                                                                                                                |
+| `MT5_SERVER`              | yes                 | —                 | Broker server name, e.g. `VTMarkets-Demo`.                                                                                                                                                                                                                                                                                                                   |
+| `MT5_INTEGRATION`         | no                  | `metaapi`         | One of `metaapi`, `python-bridge`, `mt5-webrequest`. See §14.                                                                                                                                                                                                                                                                                                |
+| `METAAPI_TOKEN`           | yes (metaapi)       | —                 | metaapi.cloud API token.                                                                                                                                                                                                                                                                                                                                     |
+| `METAAPI_ACCOUNT_ID`      | yes (metaapi)       | —                 | metaapi.cloud provisioned account id.                                                                                                                                                                                                                                                                                                                        |
+| `DRY_RUN`                 | no                  | `false`           | If `true`, parse + log + notify, but **do not** call MT5. Useful for warm-up.                                                                                                                                                                                                                                                                                |
+| `LOG_LEVEL`               | no                  | `info`            | `trace` / `debug` / `info` / `warn` / `error`.                                                                                                                                                                                                                                                                                                               |
+| `TZ`                      | no                  | `Asia/Dubai`      | Timezone used for all timestamps in logs and notifications. The signal channel operates on Dubai time (UTC+4); all DB timestamps are still stored as UTC (`timestamptz`), but the pino logger and notification formatter render in this zone. **Trade execution is always immediate on message receipt** — this setting does not delay or schedule anything. |
 
 `.env` is git-ignored. `.env.example` is committed.
 
@@ -581,18 +581,18 @@ Three paths exist. The owner must pick one.
 
 ## 15. Error Handling & Edge Cases
 
-| Case                                              | Behaviour                                                                                                  |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Telegram disconnect                               | Reconnect with backoff; notify owner of each failure and each recovery.                                    |
-| MT5 disconnect                                    | Buffer incoming signals (still parse + log + notify). Reconnect with backoff. On reconnect, do **not** replay old signals — they are stale. |
-| Signal missing required field                     | Rejected. No trade. Notification explains which field.                                                     |
-| Pair unknown to the broker                        | Rejected. No trade. Notification names the pair.                                                           |
-| Broker rejects order (insufficient margin, etc.)  | Logged as `trade_attempts.status='error'`. Notification includes the broker error string.                  |
-| Order requote                                     | One retry with fresh price. Second failure stops.                                                          |
-| Same signal delivered twice (Telegram redelivery) | Dedup by `(chat_id, telegram_message_id)`.                                                                  |
-| Admin posts two signals for the same pair in < 5 s | Both are placed. v1 has no portfolio-level deduplication.                                                 |
-| Process crashes between parse and trade attempt   | Restart picks up nothing — the signal is gone from Telegram's queue by then. The DB row exists, so the owner can replay manually if desired. |
-| `DRY_RUN=true`                                    | Everything happens except the actual `placeMarketOrder` call. `trade_attempts.status='dry_run'`.           |
+| Case                                               | Behaviour                                                                                                                                    |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Telegram disconnect                                | Reconnect with backoff; notify owner of each failure and each recovery.                                                                      |
+| MT5 disconnect                                     | Buffer incoming signals (still parse + log + notify). Reconnect with backoff. On reconnect, do **not** replay old signals — they are stale.  |
+| Signal missing required field                      | Rejected. No trade. Notification explains which field.                                                                                       |
+| Pair unknown to the broker                         | Rejected. No trade. Notification names the pair.                                                                                             |
+| Broker rejects order (insufficient margin, etc.)   | Logged as `trade_attempts.status='error'`. Notification includes the broker error string.                                                    |
+| Order requote                                      | One retry with fresh price. Second failure stops.                                                                                            |
+| Same signal delivered twice (Telegram redelivery)  | Dedup by `(chat_id, telegram_message_id)`.                                                                                                   |
+| Admin posts two signals for the same pair in < 5 s | Both are placed. v1 has no portfolio-level deduplication.                                                                                    |
+| Process crashes between parse and trade attempt    | Restart picks up nothing — the signal is gone from Telegram's queue by then. The DB row exists, so the owner can replay manually if desired. |
+| `DRY_RUN=true`                                     | Everything happens except the actual `placeMarketOrder` call. `trade_attempts.status='dry_run'`.                                             |
 
 ---
 
@@ -658,27 +658,27 @@ No live-money testing in v1.
 
 > This section tracks every decision the owner has made. Defaults that have been confirmed are moved here from the open-questions list and locked.
 
-| #  | Topic                              | Decision                                                                                       |
-| -- | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1  | Telegram path                      | **GramJS + user session** (Option B). One-time `scripts/telegram-auth.ts` produces the session string. |
-| 2  | MT5 integration                    | **MetaAPI** (cloud, Node SDK).                                                                  |
-| 3  | MT5 demo server                    | `MT5_SERVER=VTMarkets-Demo`                                                                     |
-| 4  | Telegram channel id                | **PENDING** — owner to provide later. Stored in `TELEGRAM_CHANNEL_ID`.                          |
-| 5  | Admin sender filter                | **Optional in v1.** `TELEGRAM_ADMIN_USER_ID` defaults to unset; the channel's own permissions already guarantee only the admin can post. The filter, if set, is pure defence-in-depth. |
-| 6  | Heartbeat interval                 | 24 h.                                                                                          |
-| 7  | Database hosting                   | **Resolved** — Railway Postgres. `DATABASE_URL` auto-injected in Railway; copied into local `.env` for dev. |
-| 8  | Timezone                           | `TZ=Asia/Dubai` (UTC+4) for log + notification rendering. All DB timestamps stored as UTC (`timestamptz`). **Execution is always immediate** — TZ does not delay anything. |
-| 9  | Multiple admins                    | v1 single-admin. Not a current concern.                                                         |
-| 10 | R:R / direction-vs-level checks    | **None.** We trust the admin blindly. Parser only verifies the four fields are present and well-formed. |
-| 11 | Dedup window                       | Forever (by `(chat_id, telegram_message_id)`). Telegram ids are unique per chat.                |
-| 12 | Edited messages                    | Ignored. Only `message` events processed.                                                       |
-| 13 | Duplicate signal guard             | None in v1. Both will be placed. (v2 may add.)                                                  |
-| 14 | Logging / DB retention              | Forever. (Data volume is trivial.)                                                              |
-| 15 | Notification wording               | Approved as per §8.5.                                                                           |
-| 16 | Hard-coded "MetaTrader 5"          | Forbidden in `src/`. Enforced by ESLint. Use `PLATFORM_LABEL` (default `MT5`).                  |
-| 17 | Railway region                     | `us-east1`.                                                                                    |
-| 18 | Kill switch mechanism              | **Env-var only** — `KILL_SWITCH=true` in Railway Variables. No HTTP kill endpoint.              |
-| 19 | Local DB during dev                | Use the Railway Postgres directly (copy `DATABASE_URL` from the Railway dashboard into `.env`). |
+| #   | Topic                           | Decision                                                                                                                                                                               |
+| --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Telegram path                   | **GramJS + user session** (Option B). One-time `scripts/telegram-auth.ts` produces the session string.                                                                                 |
+| 2   | MT5 integration                 | **MetaAPI** (cloud, Node SDK).                                                                                                                                                         |
+| 3   | MT5 demo server                 | `MT5_SERVER=VTMarkets-Demo`                                                                                                                                                            |
+| 4   | Telegram channel id             | **PENDING** — owner to provide later. Stored in `TELEGRAM_CHANNEL_ID`.                                                                                                                 |
+| 5   | Admin sender filter             | **Optional in v1.** `TELEGRAM_ADMIN_USER_ID` defaults to unset; the channel's own permissions already guarantee only the admin can post. The filter, if set, is pure defence-in-depth. |
+| 6   | Heartbeat interval              | 24 h.                                                                                                                                                                                  |
+| 7   | Database hosting                | **Resolved** — Railway Postgres. `DATABASE_URL` auto-injected in Railway; copied into local `.env` for dev.                                                                            |
+| 8   | Timezone                        | `TZ=Asia/Dubai` (UTC+4) for log + notification rendering. All DB timestamps stored as UTC (`timestamptz`). **Execution is always immediate** — TZ does not delay anything.             |
+| 9   | Multiple admins                 | v1 single-admin. Not a current concern.                                                                                                                                                |
+| 10  | R:R / direction-vs-level checks | **None.** We trust the admin blindly. Parser only verifies the four fields are present and well-formed.                                                                                |
+| 11  | Dedup window                    | Forever (by `(chat_id, telegram_message_id)`). Telegram ids are unique per chat.                                                                                                       |
+| 12  | Edited messages                 | Ignored. Only `message` events processed.                                                                                                                                              |
+| 13  | Duplicate signal guard          | None in v1. Both will be placed. (v2 may add.)                                                                                                                                         |
+| 14  | Logging / DB retention          | Forever. (Data volume is trivial.)                                                                                                                                                     |
+| 15  | Notification wording            | Approved as per §8.5.                                                                                                                                                                  |
+| 16  | Hard-coded "MetaTrader 5"       | Forbidden in `src/`. Enforced by ESLint. Use `PLATFORM_LABEL` (default `MT5`).                                                                                                         |
+| 17  | Railway region                  | `us-east1`.                                                                                                                                                                            |
+| 18  | Kill switch mechanism           | **Env-var only** — `KILL_SWITCH=true` in Railway Variables. No HTTP kill endpoint.                                                                                                     |
+| 19  | Local DB during dev             | Use the Railway Postgres directly (copy `DATABASE_URL` from the Railway dashboard into `.env`).                                                                                        |
 
 ### Still open (low priority — defaults will be used if not answered)
 
@@ -710,10 +710,10 @@ The v1 build is "done" when all of the following hold:
 
 Two Railway services in the same project:
 
-| Service         | Type              | Purpose                                                            |
-| --------------- | ----------------- | ------------------------------------------------------------------ |
-| `billo-worker`  | Web service (Node) | The TypeScript listener/executor described throughout this PRD.   |
-| `billo-db`      | Railway Postgres  | Managed PostgreSQL 15+ for `signals`, `parse_results`, etc.        |
+| Service        | Type               | Purpose                                                         |
+| -------------- | ------------------ | --------------------------------------------------------------- |
+| `billo-worker` | Web service (Node) | The TypeScript listener/executor described throughout this PRD. |
+| `billo-db`     | Railway Postgres   | Managed PostgreSQL 15+ for `signals`, `parse_results`, etc.     |
 
 `DATABASE_URL` is **not** set manually. When the Postgres service is provisioned and linked to `billo-worker`, Railway injects it automatically.
 
@@ -798,15 +798,15 @@ Build command is set in `railway.json` (or auto-detected from `package.json`):
 
 The owner has decided to **use the same Railway Postgres from local dev**. This keeps the dev and prod schemas in lockstep and avoids running a second Postgres locally. The cost is a network round-trip on every DB query during dev — acceptable for a low-traffic listener.
 
-| Concern           | Local                                | Railway                                                              |
-| ----------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| Env vars          | `.env` (git-ignored)                 | Railway Variables tab                                                |
-| `DATABASE_URL`    | Copy the value from Railway's Postgres service "Connect" tab into `.env` | Auto-injected by Railway                                             |
-| Process lifecycle | `tsx watch` (foreground)             | Container, restarted by Railway on crash                             |
-| Logs              | `pino-pretty` to terminal            | Raw JSON to stdout, captured by Railway                              |
-| Schema migrations | `npm run db:migrate` manually        | Automatic on every deploy via the `release` phase                    |
-| Health probe      | `curl localhost:8080/health`         | Railway hits `/health` per `healthcheckPath`                         |
-| `SIGTERM`         | Ctrl-C                               | Sent on deploy/restart; service must drain (see §17)                 |
+| Concern           | Local                                                                    | Railway                                              |
+| ----------------- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Env vars          | `.env` (git-ignored)                                                     | Railway Variables tab                                |
+| `DATABASE_URL`    | Copy the value from Railway's Postgres service "Connect" tab into `.env` | Auto-injected by Railway                             |
+| Process lifecycle | `tsx watch` (foreground)                                                 | Container, restarted by Railway on crash             |
+| Logs              | `pino-pretty` to terminal                                                | Raw JSON to stdout, captured by Railway              |
+| Schema migrations | `npm run db:migrate` manually                                            | Automatic on every deploy via the `release` phase    |
+| Health probe      | `curl localhost:8080/health`                                             | Railway hits `/health` per `healthcheckPath`         |
+| `SIGTERM`         | Ctrl-C                                                                   | Sent on deploy/restart; service must drain (see §17) |
 
 ### 21.7 Cost notes
 
@@ -824,7 +824,7 @@ The owner has decided to **use the same Railway Postgres from local dev**. This 
 
 ## 22. Milestones (v1 implementation breakdown)
 
-> The product roadmap in §18 is the *what* (what v1/v2/v3 deliver). This section is the *how* — the ordered, AI-assistant-friendly build plan for v1.
+> The product roadmap in §18 is the _what_ (what v1/v2/v3 deliver). This section is the _how_ — the ordered, AI-assistant-friendly build plan for v1.
 >
 > Milestones are designed to be small enough to implement and verify in one or two AI sessions each. They split into two phases:
 >
@@ -1038,7 +1038,7 @@ The owner has decided to **use the same Railway Postgres from local dev**. This 
   3. A row in `trade_attempts` with `status='filled'`,
   4. A filled market order on the MetaAPI demo account,
   5. A Telegram DM to the owner with the filled template,
-  — all within 1 s median.
+     — all within 1 s median.
 - Posting a malformed message results in: signal row, rejected parse row, no trade row, rejection DM. The process keeps running.
 - Posting a message from a non-admin user (when `TELEGRAM_ADMIN_USER_ID` is set) results in: no signal row, `ignored_other_sender` log, an `ignored` DM to the owner. (This branch is only reached if the filter is on; otherwise it's unreachable because Telegram won't let non-admins post.)
 - Restarting the process and re-delivering the same Telegram message (simulated via a test that calls the listener directly with a duplicate `message_id`) does not create a second trade.
@@ -1140,22 +1140,22 @@ After M0, the **six shaded milestones (M1–M6) can be developed in parallel** b
 
 ### Milestone sizing (rough estimates)
 
-| Milestone | Size    | Notes                                                                |
-| --------- | ------- | -------------------------------------------------------------------- |
-| M0        | XS      | Toolchain only. < 1 session.                                         |
-| M1        | M       | Schema + 4 repos + env loader + tests. ~1 session.                    |
-| M2        | M       | Pure module, but many test cases. ~1 session.                         |
-| M3        | L       | GramJS has a learning curve + reconnection. ~1–2 sessions.            |
-| M4        | M       | MetaAPI SDK is straightforward. ~1 session.                           |
-| M5        | S       | Thin wrapper. < 1 session.                                            |
-| M6        | S       | Express + a few endpoints. < 1 session.                                |
-| M7        | L       | Integration + the type-safety check that ties it together. ~1–2 sessions. |
-| M8        | S       | Config files + a deploy doc. < 1 session.                              |
-| M9        | M       | Mostly verification + soak-test babysitting. ~1 session + 7 days.    |
-| M10       | XS      | Config change + redeploy. < 1 hour.                                   |
+| Milestone | Size | Notes                                                                     |
+| --------- | ---- | ------------------------------------------------------------------------- |
+| M0        | XS   | Toolchain only. < 1 session.                                              |
+| M1        | M    | Schema + 4 repos + env loader + tests. ~1 session.                        |
+| M2        | M    | Pure module, but many test cases. ~1 session.                             |
+| M3        | L    | GramJS has a learning curve + reconnection. ~1–2 sessions.                |
+| M4        | M    | MetaAPI SDK is straightforward. ~1 session.                               |
+| M5        | S    | Thin wrapper. < 1 session.                                                |
+| M6        | S    | Express + a few endpoints. < 1 session.                                   |
+| M7        | L    | Integration + the type-safety check that ties it together. ~1–2 sessions. |
+| M8        | S    | Config files + a deploy doc. < 1 session.                                 |
+| M9        | M    | Mostly verification + soak-test babysitting. ~1 session + 7 days.         |
+| M10       | XS   | Config change + redeploy. < 1 hour.                                       |
 
 Total active engineering: roughly **5–8 sessions** of focused work, plus a 7-day soak. After M10, v2 milestones will be drafted.
 
 ---
 
-*End of PRD v1.2.*
+_End of PRD v1.2._
