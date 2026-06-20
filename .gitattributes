@@ -1,0 +1,16 @@
+# Enforce LF line endings for source files in this repo, regardless of the user's
+# global core.autocrlf setting. .editorconfig already declares this intent; this
+# file makes git honor it (autocrlf would otherwise re-normalize to CRLF on
+# Windows checkouts).
+*               text=auto eol=lf
+*.ts            text eol=lf
+*.js            text eol=lf
+*.cjs           text eol=lf
+*.mjs           text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.txt           text eol=lf
+*.env.example   text eol=lf
+.env.example    text eol=lf
