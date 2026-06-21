@@ -67,4 +67,51 @@ describe('env loader', () => {
     delete process.env.TELEGRAM_API_ID;
     await expect(import('./env.js')).rejects.toThrow(/TELEGRAM_API_ID/);
   });
+
+  it('coerces LOT_SIZE and MAGIC_NUMBER strings to numbers', async () => {
+    setValidEnv();
+    process.env.LOT_SIZE = '0.05';
+    process.env.MAGIC_NUMBER = '123456';
+    const { env } = await import('./env.js');
+    expect(env.LOT_SIZE).toBe(0.05);
+    expect(typeof env.LOT_SIZE).toBe('number');
+    expect(env.MAGIC_NUMBER).toBe(123456);
+    expect(typeof env.MAGIC_NUMBER).toBe('number');
+  });
+
+  it('throws when LOT_SIZE is not a number', async () => {
+    setValidEnv();
+    process.env.LOT_SIZE = 'not-a-number';
+    await expect(import('./env.js')).rejects.toThrow(/LOT_SIZE/);
+  });
+
+  it('coerces DRY_RUN and KILL_SWITCH from truthy/falsy strings', async () => {
+    setValidEnv();
+    process.env.DRY_RUN = 'true';
+    process.env.KILL_SWITCH = '1';
+    const { env } = await import('./env.js');
+    expect(env.DRY_RUN).toBe(true);
+    expect(env.KILL_SWITCH).toBe(true);
+  });
+
+  it('treats DRY_RUN="false" as false', async () => {
+    setValidEnv();
+    process.env.DRY_RUN = 'false';
+    const { env } = await import('./env.js');
+    expect(env.DRY_RUN).toBe(false);
+  });
+
+  it('leaves TELEGRAM_ADMIN_USER_ID undefined when unset', async () => {
+    setValidEnv();
+    delete process.env.TELEGRAM_ADMIN_USER_ID;
+    const { env } = await import('./env.js');
+    expect(env.TELEGRAM_ADMIN_USER_ID).toBeUndefined();
+  });
+
+  it('respects an overridden TZ', async () => {
+    setValidEnv();
+    process.env.TZ = 'UTC';
+    const { env } = await import('./env.js');
+    expect(env.TZ).toBe('UTC');
+  });
 });
