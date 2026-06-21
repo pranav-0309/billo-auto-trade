@@ -118,15 +118,15 @@ export function parse(text: string): ParseResult;
 
 ### 5.1 `src/parser/regex.ts` — exported constants
 
-The six regexes from PRD §7.5, verbatim:
+The header regex matches PRD §7.5 verbatim. The five number regexes use `[^\n]+` capture groups instead of `[0-9]+(?:\.[0-9]+)?` from the PRD §7.5 "illustrative" snippet — see "Notes" below for why.
 
 ```ts
 export const RE_HEADER = /^\s*(?:🔼BUY|🔽SELL)\s+([A-Z]{6})\s*$/m;
-export const RE_SL      = /🔴\s*SL\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
-export const RE_TP1     = /🟢\s*TP1\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
-export const RE_TP2     = /🟢\s*TP2\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
-export const RE_TP3     = /🟢\s*TP3\s*:\s*([0-9]+(?:\.[0-9]+)?)/;
-export const RE_EXEC    = /Execution\s*Price\s*:\s*([0-9]+(?:\.[0-9]+)?)/i;
+export const RE_SL     = /🔴\s*SL\s*:\s*([^\n]+)/;
+export const RE_TP1    = /🟢\s*TP1\s*:\s*([^\n]+)/;
+export const RE_TP2    = /🟢\s*TP2\s*:\s*([^\n]+)/;
+export const RE_TP3    = /🟢\s*TP3\s*:\s*([^\n]+)/;
+export const RE_EXEC   = /Execution\s*Price\s*:\s*([^\n]+)/i;
 ```
 
 Notes:
@@ -134,6 +134,7 @@ Notes:
 - `RE_HEADER` carries the `m` flag so it scans line-by-line. `RE_SL`, `RE_TP1`, `RE_TP2`, `RE_TP3` match anywhere in the string; they ignore which line they sit on. This matches PRD §7.5.
 - Direction match is **case-sensitive** (`BUY`, `SELL` uppercase). Per PRD §7.3.
 - Pair regex is `[A-Z]{6}` — uppercase only, exactly six letters. PRD §7.4 validation.
+- The five number regexes use `[^\n]+` capture groups rather than the strict `[0-9]+(?:\.[0-9]+)?` from PRD §7.5. PRD §7.5's snippet is labelled "Suggested regex (illustrative)" and PRD §7.4's validation rule says SL/TP1 must "parse as finite positive numbers" — i.e., validation lives at the `Number()` + `isFinite` + `> 0` layer, not in the regex. With strict capture groups, `🔴 SL: -1.0781` and `🔴 SL: abc` never match the regex, so the `NumberExtraction` discriminator cannot classify them as `invalid` (only as `missing`). Loosening to `[^\n]+` makes the line presence detectable; `extractNumber` then validates the captured string and emits `invalid` for negatives, zero, NaN, or non-numeric values. `[^\n]+` stops at the line boundary so a `🟢 TP1:` line does not bleed into `🟢 TP2:` content on the next line.
 
 ### 5.2 Per-field extractors (private to `parse.ts`)
 
