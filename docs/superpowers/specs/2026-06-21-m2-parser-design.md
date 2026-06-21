@@ -137,18 +137,24 @@ Notes:
 
 ### 5.2 Per-field extractors (private to `parse.ts`)
 
+The orchestrator needs to distinguish **three** outcomes from a number field: line missing, line present but unparseable/invalid, line present and valid. So `extractNumber` returns a discriminated union, not a bare `number | null`.
+
 ```ts
 type ExtractedHeader = { direction: Direction; pairRaw: string } | null;
+type NumberExtraction =
+  | { kind: 'ok'; value: number }
+  | { kind: 'missing' }
+  | { kind: 'invalid' };  // regex matched but value isn't a finite positive number
 
 function extractHeader(text: string): ExtractedHeader;
-function extractPositiveNumber(text: string, re: RegExp): number | null;
+function extractNumber(text: string, re: RegExp): NumberExtraction;
 function extractOptionalNumber(text: string, re: RegExp): number | null;
 function normalizePairOrNull(raw: string): string | null;
 ```
 
 - **`extractHeader`** — runs `RE_HEADER.exec(text)`. Returns `null` on no match. On match, returns `{ direction: match[0].includes('🔼') ? 'BUY' : 'SELL', pairRaw: match[1] }`.
-- **`extractPositiveNumber`** — runs `re.exec(text)`. If no match → `null`. If match, runs `Number(match[1])`. Returns `null` if the result is `NaN`, `Infinity`, `-Infinity`, `0`, or negative. PRD §7.4: "finite positive numbers".
-- **`extractOptionalNumber`** — same regex and parse, but a missing line is **not** an error: returns `null` on no match without consuming one of the rejection reasons.
+- **`extractNumber`** — runs `re.exec(text)`. If no match → `{ kind: 'missing' }`. If match, runs `Number(match[1])`. Returns `{ kind: 'invalid' }` if the result is `NaN`, `Infinity`, `-Infinity`, `0`, or negative; otherwise `{ kind: 'ok', value: n }`. PRD §7.4: "finite positive numbers".
+- **`extractOptionalNumber`** — same regex and parse semantics as `extractNumber`, but collapses missing/invalid into `null` (since neither is fatal for the optional TP2/TP3/executionPrice fields). Used only on lines whose absence must not produce a rejection.
 - **`normalizePairOrNull`** — calls `normalize(header.pairRaw)` from `src/config/pairs.ts` and returns whatever `normalize` returns. v1 imports directly (no DI).
 
 These helpers are **not exported** from `parse.ts`. Tests target `parse()` end-to-end; the helpers are private implementation detail.
@@ -163,12 +169,16 @@ export function parse(text: string): ParseResult {
   const pairNormalized = normalizePairOrNull(header.pairRaw);
   if (!pairNormalized) return { outcome: 'rejected', reason: 'invalid_pair' };
 
-  const sl = extractPositiveNumber(text, RE_SL);
-  if (sl === null) return { outcome: 'rejected', reason: 'missing_sl' };
+  const slResult = extractNumber(text, RE_SL);
+  if (slResult.kind === 'missing') return { outcome: 'rejected', reason: 'missing_sl' };
+  if (slResult.kind === 'invalid') return { outcome: 'rejected', reason: 'invalid_number' };
 
-  const tp1 = extractPositiveNumber(text, RE_TP1);
-  if (tp1 === null) return { outcome: 'rejected', reason: 'missing_tp1' };
+  const tp1Result = extractNumber(text, RE_TP1);
+  if (tp1Result.kind === 'missing') return { outcome: 'rejected', reason: 'missing_tp1' };
+  if (tp1Result.kind === 'invalid') return { outcome: 'rejected', reason: 'invalid_number' };
 
+  const sl = slResult.value;
+  const tp1 = tp1Result.value;
   if (sl === tp1) return { outcome: 'rejected', reason: 'sl_equals_tp1' };
 
   return {
@@ -191,7 +201,7 @@ export function parse(text: string): ParseResult {
 
 - **No geometric / R:R validation.** PRD §7.4 + decision log #10 — admin is trusted blindly. A BUY with TP below SL is accepted as-is.
 - **Whitespace tolerance.** `RE_HEADER` accepts leading whitespace on the header line and any amount of horizontal whitespace around the pair. Blank lines between fields are fine.
-- **Order matters.** `header → pair → SL → TP1 → SL≠TP1`. Anything syntactically malformed is caught by the extractor returning `null`; the `sl_equals_tp1` check fires only after both SL and TP1 parsed as finite positives.
+- **Order matters.** `header → pair → SL (missing/invalid) → TP1 (missing/invalid) → SL≠TP1`. The orchestrator branches on each `NumberExtraction` variant so the typed `RejectionReason` is precise: a missing SL line is `missing_sl`, an unparseable SL is `invalid_number`. The `sl_equals_tp1` check fires only after both SL and TP1 parsed as finite positives.
 - **TP-only messages** (TP1 present, TP2/TP3 missing) → `{ outcome: 'ok', parsed: { …, tp2: null, tp3: null } }`. PRD §7.3 says TP2/TP3 are optional.
 - **Trailing junk** after the `⚠️ Manage your risks` footer is silently ignored — `RE_HEADER` is anchored to a single line, and the field regexes don't care what comes after.
 - **Empty / whitespace-only input** → `extractHeader` returns `null` → `wrong_format`. Tested explicitly.
