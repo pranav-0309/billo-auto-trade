@@ -31,3 +31,17 @@ describe('parser/parse — wrong_format branch', () => {
     });
   });
 });
+
+describe('parser/parse — invalid_pair branch', () => {
+  it('rejects a known-shaped pair that is not in the PAIRS map', () => {
+    expect(
+      parse('🔼BUY BTCEUR\n🔴 SL: 50000\n🟢 TP1: 51000'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_pair' });
+  });
+
+  it('rejects a 6-letter ticker that is not a real pair', () => {
+    expect(
+      parse('🔽SELL XAUUSD\n🔴 SL: 2000\n🟢 TP1: 1900'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_pair' });
+  });
+});
