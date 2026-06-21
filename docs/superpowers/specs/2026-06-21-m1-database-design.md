@@ -568,7 +568,7 @@ DATABASE_URL_TEST=postgres://user:pass@host:5432/billo_test
   "dependencies": {
     "dotenv": "^16.4.5",
     "pg": "^8.13.0",
-    "node-pg-migrate": "^7.6.1",
+    "node-pg-migrate": "^8.0.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "dotenv": "^16.6.1",
-    "node-pg-migrate": "^7.9.1",
+    "node-pg-migrate": "^8.0.4",
     "pg": "^8.22.0",
     "pino": "^9.5.0",
     "zod": "^3.25.76"
