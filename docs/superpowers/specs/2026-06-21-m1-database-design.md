@@ -160,7 +160,6 @@ DROP TABLE IF EXISTS signals;
 
 ```json
 {
-  "databaseUrl": ["DATABASE_URL", "DATABASE_URL_TEST"],
   "migrationsDir": "migrations",
   "migrationFileLanguage": "ts",
   "tsconfig": "tsconfig.migrations.json",
@@ -175,7 +174,7 @@ DROP TABLE IF EXISTS signals;
 }
 ```
 
-- `databaseUrl: ["DATABASE_URL", "DATABASE_URL_TEST"]` — node-pg-migrate tries `DATABASE_URL` first (production / local dev), falls back to `DATABASE_URL_TEST` (used by the repo tests and `db:migrate:test`).
+- `databaseUrl` is intentionally omitted from the config — node-pg-migrate v8 reads `DATABASE_URL` by default. Production / local dev migrations read `DATABASE_URL` as expected.
 - `migrationsDir: "migrations"` — where the TS shims live. node-pg-migrate does **not** need to know about `sql/migrations/` — the shim reads those files directly via `fs.readFileSync`.
 - `migrationFileLanguage: "ts"` — shims are TS; run via `tsx` under the hood.
 - `tsconfig.migrations.json` — separate minimal tsconfig for migrations (target ES2022, module NodeNext) so we don't pull the test-exclusion rule from the main `tsconfig.json` into migration compilation.
@@ -210,13 +209,17 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
 {
   "db:migrate": "node-pg-migrate up",
   "db:rollback": "node-pg-migrate down",
-  "db:migrate:test": "node-pg-migrate --envPath .env.test up",
-  "db:rollback:test": "node-pg-migrate --envPath .env.test down",
+  "db:migrate:test": "node-pg-migrate --envPath .env.test --tsx --database-url-var DATABASE_URL_TEST up",
+  "db:rollback:test": "node-pg-migrate --envPath .env.test --tsx --database-url-var DATABASE_URL_TEST down",
   "db:reset:test": "npm run db:rollback:test && npm run db:migrate:test"
 }
 ```
 
-The `db:migrate:test` script uses `node-pg-migrate`'s built-in `--envPath` flag (documented in the upstream CLI) to load `.env.test` and pick up `DATABASE_URL_TEST` automatically. `--envPath` works because `dotenv` is installed as a runtime dep (§11) — node-pg-migrate shells out to it when loading the `.env` file.
+The test scripts:
+
+- `--envPath .env.test` — load `.env.test` via node-pg-migrate's built-in dotenv path support, so `DATABASE_URL_TEST` is visible.
+- `--tsx` — load the `.ts` migration shim via `tsx` (not `ts-node`, which is not a project dep and not installed). node-pg-migrate v8 defaults to `ts-node`; passing `--tsx` overrides that.
+- `--database-url-var DATABASE_URL_TEST` — tell node-pg-migrate the env var name holding the connection string. Default is `DATABASE_URL`, which `.env.test` does not define.
 
 ---
 
