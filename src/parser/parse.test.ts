@@ -45,3 +45,24 @@ describe('parser/parse — invalid_pair branch', () => {
     ).toEqual({ outcome: 'rejected', reason: 'invalid_pair' });
   });
 });
+
+describe('parser/parse — missing_sl / missing_tp1 branches', () => {
+  it('rejects when the SL line is missing', () => {
+    expect(
+      parse('🔼BUY EURUSD\n\n🟢 TP1: 1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'missing_sl' });
+  });
+
+  it('rejects when the TP1 line is missing', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n'),
+    ).toEqual({ outcome: 'rejected', reason: 'missing_tp1' });
+  });
+
+  it('reports missing_sl before missing_tp1 when both are absent', () => {
+    expect(parse('🔼BUY EURUSD\n')).toEqual({
+      outcome: 'rejected',
+      reason: 'missing_sl',
+    });
+  });
+});
