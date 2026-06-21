@@ -68,8 +68,8 @@ billo-auto-trade/
 Notes:
 
 - Migration filenames are **timestamps in milliseconds** so node-pg-migrate's auto-sorting works and parallel branches don't collide.
-- `sql/migrations/` holds the SQL humans review; `migrations/` holds the TS shim that node-pg-migrate imports.
-- `.node-pg-migrate.json` points node-pg-migrate at the TS shim directory and at `sql/migrations/` for SQL file lookup.
+- `sql/migrations/` holds the SQL humans review; `migrations/` holds the TS shim that node-pg-migrate imports. The shim reads the SQL files via `fs.readFileSync` — node-pg-migrate itself only knows about the shim directory.
+- `.node-pg-migrate.json` points node-pg-migrate at the TS shim directory only (`migrationsDir: "migrations"`). The actual SQL files are loaded by the shim at runtime.
 - `.env.test.example` documents the `DATABASE_URL_TEST` shape; the real `.env.test` is git-ignored (covered by the existing `.env.*` rule in `.gitignore`).
 
 ---
@@ -160,7 +160,6 @@ DROP TABLE IF EXISTS signals;
 
 ```json
 {
-  "databaseUrl": ["DATABASE_URL", "DATABASE_URL_TEST"],
   "migrationsDir": "migrations",
   "migrationFileLanguage": "ts",
   "tsconfig": "tsconfig.migrations.json",
@@ -175,7 +174,7 @@ DROP TABLE IF EXISTS signals;
 }
 ```
 
-- `databaseUrl: ["DATABASE_URL", "DATABASE_URL_TEST"]` — node-pg-migrate tries `DATABASE_URL` first (production / local dev), falls back to `DATABASE_URL_TEST` (used by the repo tests and `db:migrate:test`).
+- `databaseUrl` is intentionally omitted from the config — node-pg-migrate v8 reads `DATABASE_URL` by default. Production / local dev migrations read `DATABASE_URL` as expected.
 - `migrationsDir: "migrations"` — where the TS shims live. node-pg-migrate does **not** need to know about `sql/migrations/` — the shim reads those files directly via `fs.readFileSync`.
 - `migrationFileLanguage: "ts"` — shims are TS; run via `tsx` under the hood.
 - `tsconfig.migrations.json` — separate minimal tsconfig for migrations (target ES2022, module NodeNext) so we don't pull the test-exclusion rule from the main `tsconfig.json` into migration compilation.
@@ -210,13 +209,17 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
 {
   "db:migrate": "node-pg-migrate up",
   "db:rollback": "node-pg-migrate down",
-  "db:migrate:test": "node-pg-migrate --envPath .env.test up",
-  "db:rollback:test": "node-pg-migrate --envPath .env.test down",
+  "db:migrate:test": "node-pg-migrate --envPath .env.test --tsx --database-url-var DATABASE_URL_TEST up",
+  "db:rollback:test": "node-pg-migrate --envPath .env.test --tsx --database-url-var DATABASE_URL_TEST down",
   "db:reset:test": "npm run db:rollback:test && npm run db:migrate:test"
 }
 ```
 
-The `db:migrate:test` script uses `node-pg-migrate`'s built-in `--envPath` flag (documented in the upstream CLI) to load `.env.test` and pick up `DATABASE_URL_TEST` automatically. `--envPath` works because `dotenv` is installed as a runtime dep (§11) — node-pg-migrate shells out to it when loading the `.env` file.
+The test scripts:
+
+- `--envPath .env.test` — load `.env.test` via node-pg-migrate's built-in dotenv path support, so `DATABASE_URL_TEST` is visible.
+- `--tsx` — load the `.ts` migration shim via `tsx` (not `ts-node`, which is not a project dep and not installed). node-pg-migrate v8 defaults to `ts-node`; passing `--tsx` overrides that.
+- `--database-url-var DATABASE_URL_TEST` — tell node-pg-migrate the env var name holding the connection string. Default is `DATABASE_URL`, which `.env.test` does not define.
 
 ---
 
@@ -281,9 +284,11 @@ const schema = z.object({
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
-  // eslint-disable-next-line no-console
-  console.error('Invalid environment:', parsed.error.flatten().fieldErrors);
-  throw new Error('Environment validation failed; see errors above.');
+  const fieldErrors = parsed.error.flatten().fieldErrors;
+  console.error('Invalid environment:', fieldErrors);
+  throw new Error(
+    `Environment validation failed: ${JSON.stringify(fieldErrors)}`,
+  );
 }
 
 export const env = parsed.data;
@@ -568,7 +573,7 @@ DATABASE_URL_TEST=postgres://user:pass@host:5432/billo_test
   "dependencies": {
     "dotenv": "^16.4.5",
     "pg": "^8.13.0",
-    "node-pg-migrate": "^7.6.1",
+    "node-pg-migrate": "^8.0.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {

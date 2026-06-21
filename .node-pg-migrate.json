@@ -1,0 +1,13 @@
+{
+  "migrationsDir": "migrations",
+  "migrationFileLanguage": "ts",
+  "tsconfig": "tsconfig.migrations.json",
+  "schema": "public",
+  "createSchema": false,
+  "createMigrationsSchema": true,
+  "migrationTableName": "pgmigrations",
+  "ignorePattern": "\\..*",
+  "decamelize": false,
+  "noLock": false,
+  "singleTransaction": true
+}
