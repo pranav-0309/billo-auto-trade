@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PAIRS } from '../config/pairs.js';
 import { parse } from './parse.js';
 
 describe('parser/parse — wrong_format branch', () => {
@@ -276,4 +277,27 @@ describe('parser/parse — whitespace tolerance and edge cases', () => {
       parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n🟢 TP1: 1.0721'),
     ).toMatchObject({ outcome: 'ok', parsed: { direction: 'BUY', sl: 1.0781, tp1: 1.0721 } });
   });
+});
+
+describe('parser/parse — every PAIRS entry parses successfully', () => {
+  for (const raw of Object.keys(PAIRS)) {
+    const expectedNormalized = PAIRS[raw];
+    it(`parses 🔼BUY ${raw} to pairNormalized="${expectedNormalized}"`, () => {
+      const text = `🔼BUY ${raw}\n🔴 SL: 1.0\n🟢 TP1: 0.9`;
+      const result = parse(text);
+      expect(result).toEqual({
+        outcome: 'ok',
+        parsed: {
+          direction: 'BUY',
+          pairRaw: raw,
+          pairNormalized: expectedNormalized,
+          sl: 1.0,
+          tp1: 0.9,
+          tp2: null,
+          tp3: null,
+          executionPrice: null,
+        },
+      });
+    });
+  }
 });
