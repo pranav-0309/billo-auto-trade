@@ -219,3 +219,61 @@ Execution Price: not-a-price
     }
   });
 });
+
+describe('parser/parse — whitespace tolerance and edge cases', () => {
+  it('accepts leading and trailing whitespace on the header line', () => {
+    const text = '   🔼BUY EURUSD   \n🔴 SL: 1.0781\n🟢 TP1: 1.0721';
+    const result = parse(text);
+    expect(result.outcome).toBe('ok');
+    if (result.outcome === 'ok') {
+      expect(result.parsed.direction).toBe('BUY');
+      expect(result.parsed.pairNormalized).toBe('EUR/USD');
+    }
+  });
+
+  it('accepts blank lines between fields', () => {
+    const text = `🔼BUY EURUSD
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721`;
+    const result = parse(text);
+    expect(result.outcome).toBe('ok');
+  });
+
+  it('accepts extra trailing text after the footer', () => {
+    const text = `🔼BUY EURUSD
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721
+
+⚠️ Manage your risks
+
+— forwarded by some user at 2026-06-21`;
+    const result = parse(text);
+    expect(result.outcome).toBe('ok');
+    if (result.outcome === 'ok') {
+      expect(result.parsed.sl).toBe(1.0781);
+      expect(result.parsed.tp1).toBe(1.0721);
+    }
+  });
+
+  it('rejects when the SL emoji is wrong (blue circle instead of red)', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔵 SL: 1.0781\n🟢 TP1: 1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'missing_sl' });
+  });
+
+  it('rejects when the TP1 emoji is wrong (yellow instead of green)', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n🟡 TP1: 1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'missing_tp1' });
+  });
+
+  it('accepts a BUY with TP below SL (no geometric validation)', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n🟢 TP1: 1.0721'),
+    ).toMatchObject({ outcome: 'ok', parsed: { direction: 'BUY', sl: 1.0781, tp1: 1.0721 } });
+  });
+});
