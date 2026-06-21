@@ -66,3 +66,41 @@ describe('parser/parse — missing_sl / missing_tp1 branches', () => {
     });
   });
 });
+
+describe('parser/parse — invalid_number branch', () => {
+  it('rejects a negative SL', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: -1.0781\n🟢 TP1: 1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
+  });
+
+  it('rejects a zero SL', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 0\n🟢 TP1: 1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
+  });
+
+  it('rejects a non-numeric SL', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: abc\n🟢 TP1: 1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
+  });
+
+  it('rejects a negative TP1', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n🟢 TP1: -1.0721'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
+  });
+
+  it('rejects a zero TP1', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n🟢 TP1: 0'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
+  });
+
+  it('reports invalid_number for SL before TP1 when both are bad', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: -1\n🟢 TP1: -1'),
+    ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
+  });
+});
