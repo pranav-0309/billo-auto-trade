@@ -112,3 +112,110 @@ describe('parser/parse — sl_equals_tp1 branch', () => {
     ).toEqual({ outcome: 'rejected', reason: 'sl_equals_tp1' });
   });
 });
+
+describe('parser/parse — success path (TP2/TP3/executionPrice)', () => {
+  const fullBuy = `🔼BUY EURUSD
+
+Execution Price: 1.0735
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721
+
+🟢 TP2: 1.0681
+
+🟢 TP3: 1.0631
+
+⚠️ Manage your risks`;
+
+  const fullSell = `🔽SELL EURUSD
+
+Execution Price: 1.0735
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721
+
+🟢 TP2: 1.0681
+
+🟢 TP3: 1.0631
+
+⚠️ Manage your risks`;
+
+  it('parses a full BUY EURUSD signal with all fields populated', () => {
+    expect(parse(fullBuy)).toEqual({
+      outcome: 'ok',
+      parsed: {
+        direction: 'BUY',
+        pairRaw: 'EURUSD',
+        pairNormalized: 'EUR/USD',
+        sl: 1.0781,
+        tp1: 1.0721,
+        tp2: 1.0681,
+        tp3: 1.0631,
+        executionPrice: 1.0735,
+      },
+    });
+  });
+
+  it('parses a full SELL EURUSD signal', () => {
+    expect(parse(fullSell)).toEqual({
+      outcome: 'ok',
+      parsed: {
+        direction: 'SELL',
+        pairRaw: 'EURUSD',
+        pairNormalized: 'EUR/USD',
+        sl: 1.0781,
+        tp1: 1.0721,
+        tp2: 1.0681,
+        tp3: 1.0631,
+        executionPrice: 1.0735,
+      },
+    });
+  });
+
+  it('returns null TP2/TP3 when only TP1 is present', () => {
+    const text = `🔼BUY EURUSD
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721`;
+    const result = parse(text);
+    expect(result.outcome).toBe('ok');
+    if (result.outcome === 'ok') {
+      expect(result.parsed.tp2).toBeNull();
+      expect(result.parsed.tp3).toBeNull();
+    }
+  });
+
+  it('returns null executionPrice when the line is missing', () => {
+    const text = `🔼BUY EURUSD
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721
+
+🟢 TP2: 1.0681`;
+    const result = parse(text);
+    expect(result.outcome).toBe('ok');
+    if (result.outcome === 'ok') {
+      expect(result.parsed.executionPrice).toBeNull();
+      expect(result.parsed.tp2).toBe(1.0681);
+    }
+  });
+
+  it('returns null for an optional field when its value is non-numeric', () => {
+    const text = `🔼BUY EURUSD
+
+Execution Price: not-a-price
+
+🔴 SL: 1.0781
+
+🟢 TP1: 1.0721`;
+    const result = parse(text);
+    expect(result.outcome).toBe('ok');
+    if (result.outcome === 'ok') {
+      expect(result.parsed.executionPrice).toBeNull();
+    }
+  });
+});

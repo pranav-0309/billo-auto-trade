@@ -1,5 +1,5 @@
 import { normalize } from '../config/pairs.js';
-import { RE_HEADER, RE_SL, RE_TP1 } from './regex.js';
+import { RE_EXEC, RE_HEADER, RE_SL, RE_TP1, RE_TP2, RE_TP3 } from './regex.js';
 import type {
   Direction,
   ExtractedHeader,
@@ -27,6 +27,11 @@ function extractNumber(text: string, re: RegExp): NumberExtraction {
   return { kind: 'ok', value: n };
 }
 
+function extractOptionalNumber(text: string, re: RegExp): number | null {
+  const result = extractNumber(text, re);
+  return result.kind === 'ok' ? result.value : null;
+}
+
 function normalizePairOrNull(raw: string): string | null {
   return normalize(raw);
 }
@@ -50,16 +55,15 @@ export function parse(text: string): ParseResult {
   const tp1 = tp1Result.value;
   if (sl === tp1) return { outcome: 'rejected', reason: 'sl_equals_tp1' };
 
-  // TP2 / TP3 / executionPrice extracted in Task 8. For now, null them.
   const parsed: ParsedSignal = {
     direction: header.direction,
     pairRaw: header.pairRaw,
     pairNormalized,
     sl,
     tp1,
-    tp2: null,
-    tp3: null,
-    executionPrice: null,
+    tp2: extractOptionalNumber(text, RE_TP2),
+    tp3: extractOptionalNumber(text, RE_TP3),
+    executionPrice: extractOptionalNumber(text, RE_EXEC),
   };
   return { outcome: 'ok', parsed };
 }
