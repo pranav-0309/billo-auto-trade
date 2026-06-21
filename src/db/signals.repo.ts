@@ -18,7 +18,9 @@ export async function insertSignal(
        RETURNING *`,
       [input.telegramMessageId, input.chatId, input.senderUserId, input.rawText],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+    if (!row) throw new Error('insertSignal: expected RETURNING to return a row');
+    return row;
   } catch (err) {
     if (isUniqueViolation(err)) {
       const existing = await findByTelegramMessageId(

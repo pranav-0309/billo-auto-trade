@@ -37,7 +37,9 @@ export async function insertParseResult(
       input.executionPrice ?? null,
     ],
   );
-  return result.rows[0];
+  const row = result.rows[0];
+  if (!row) throw new Error('insertParseResult: expected RETURNING to return a row');
+  return row;
 }
 
 export async function getBySignalId(

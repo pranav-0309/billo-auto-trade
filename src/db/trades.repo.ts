@@ -17,7 +17,9 @@ export async function insertTradeAttempt(
      RETURNING *`,
     [input.signalId, input.parseResultId, input.status, input.lotSize, input.requestedSymbol],
   );
-  return result.rows[0];
+  const row = result.rows[0];
+  if (!row) throw new Error('insertTradeAttempt: expected RETURNING to return a row');
+  return row;
 }
 
 export async function updateTradeAttemptStatus(
@@ -48,7 +50,9 @@ export async function updateTradeAttemptStatus(
   if (result.rows.length === 0) {
     throw new Error(`updateTradeAttemptStatus: no row with id ${id}`);
   }
-  return result.rows[0];
+  const row = result.rows[0];
+  if (!row) throw new Error('updateTradeAttemptStatus: row vanished after existence check');
+  return row;
 }
 
 export async function getBySignalId(

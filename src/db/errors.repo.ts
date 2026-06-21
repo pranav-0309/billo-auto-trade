@@ -10,5 +10,7 @@ export async function recordError(
      RETURNING *`,
     [input.signalId ?? null, input.message, input.stack ?? null],
   );
-  return result.rows[0];
+  const row = result.rows[0];
+  if (!row) throw new Error('recordError: expected RETURNING to return a row');
+  return row;
 }
