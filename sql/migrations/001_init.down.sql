@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS errors;
+DROP TABLE IF EXISTS trade_attempts;
+DROP TABLE IF EXISTS parse_results;
+DROP TABLE IF EXISTS signals;
