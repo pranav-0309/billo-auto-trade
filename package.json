@@ -16,8 +16,8 @@
     "test:watch": "vitest",
     "db:migrate": "node-pg-migrate up",
     "db:rollback": "node-pg-migrate down",
-    "db:migrate:test": "node-pg-migrate --envPath .env.test up",
-    "db:rollback:test": "node-pg-migrate --envPath .env.test down",
+    "db:migrate:test": "node-pg-migrate --envPath .env.test --tsx --database-url-var DATABASE_URL_TEST up",
+    "db:rollback:test": "node-pg-migrate --envPath .env.test --tsx --database-url-var DATABASE_URL_TEST down",
     "db:reset:test": "npm run db:rollback:test && npm run db:migrate:test"
   },
   "dependencies": {

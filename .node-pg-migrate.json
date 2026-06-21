@@ -1,5 +1,4 @@
 {
-  "databaseUrl": ["DATABASE_URL", "DATABASE_URL_TEST"],
   "migrationsDir": "migrations",
   "migrationFileLanguage": "ts",
   "tsconfig": "tsconfig.migrations.json",
