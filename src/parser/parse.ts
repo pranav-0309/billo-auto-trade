@@ -12,8 +12,7 @@ function extractHeader(text: string): ExtractedHeader {
   const match = RE_HEADER.exec(text);
   if (!match) return null;
   const direction: Direction = match[0].includes('🔼') ? 'BUY' : 'SELL';
-  const pairRaw = match[1];
-  if (pairRaw === undefined) return null;
+  const pairRaw = match[1]!;
   return { direction, pairRaw };
 }
 
@@ -21,7 +20,6 @@ function extractNumber(text: string, re: RegExp): NumberExtraction {
   const match = re.exec(text);
   if (!match) return { kind: 'missing' };
   const captured = match[1];
-  if (captured === undefined) return { kind: 'missing' };
   const n = Number(captured);
   if (!Number.isFinite(n) || n <= 0) return { kind: 'invalid' };
   return { kind: 'ok', value: n };
