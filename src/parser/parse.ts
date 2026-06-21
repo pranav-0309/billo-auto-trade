@@ -5,6 +5,7 @@ import type {
   ExtractedHeader,
   NumberExtraction,
   ParseResult,
+  ParsedSignal,
 } from './types.js';
 
 function extractHeader(text: string): ExtractedHeader {
@@ -45,6 +46,20 @@ export function parse(text: string): ParseResult {
   if (tp1Result.kind === 'missing') return { outcome: 'rejected', reason: 'missing_tp1' };
   if (tp1Result.kind === 'invalid') return { outcome: 'rejected', reason: 'invalid_number' };
 
-  // Equality check + success path added in Tasks 6–8.
-  throw new Error('parse(): not yet implemented beyond number branches (Task 5)');
+  const sl = slResult.value;
+  const tp1 = tp1Result.value;
+  if (sl === tp1) return { outcome: 'rejected', reason: 'sl_equals_tp1' };
+
+  // TP2 / TP3 / executionPrice extracted in Task 8. For now, null them.
+  const parsed: ParsedSignal = {
+    direction: header.direction,
+    pairRaw: header.pairRaw,
+    pairNormalized,
+    sl,
+    tp1,
+    tp2: null,
+    tp3: null,
+    executionPrice: null,
+  };
+  return { outcome: 'ok', parsed };
 }

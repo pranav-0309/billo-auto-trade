@@ -104,3 +104,11 @@ describe('parser/parse — invalid_number branch', () => {
     ).toEqual({ outcome: 'rejected', reason: 'invalid_number' });
   });
 });
+
+describe('parser/parse — sl_equals_tp1 branch', () => {
+  it('rejects when SL equals TP1', () => {
+    expect(
+      parse('🔼BUY EURUSD\n🔴 SL: 1.0781\n🟢 TP1: 1.0781'),
+    ).toEqual({ outcome: 'rejected', reason: 'sl_equals_tp1' });
+  });
+});
