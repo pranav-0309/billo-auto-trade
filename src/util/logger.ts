@@ -1,11 +1,9 @@
 import pino from 'pino';
-
-const level = process.env.LOG_LEVEL ?? 'info';
-const tz = process.env.TZ ?? 'Asia/Dubai';
+import { env } from '../config/env.js';
 
 function formatTimeInTz(): string {
   const formatted = new Date().toLocaleString('en-GB', {
-    timeZone: tz,
+    timeZone: env.TZ,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -18,7 +16,7 @@ function formatTimeInTz(): string {
 }
 
 const logger = pino({
-  level,
+  level: env.LOG_LEVEL,
   timestamp: formatTimeInTz,
 });
 
