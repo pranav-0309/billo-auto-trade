@@ -68,8 +68,8 @@ billo-auto-trade/
 Notes:
 
 - Migration filenames are **timestamps in milliseconds** so node-pg-migrate's auto-sorting works and parallel branches don't collide.
-- `sql/migrations/` holds the SQL humans review; `migrations/` holds the TS shim that node-pg-migrate imports.
-- `.node-pg-migrate.json` points node-pg-migrate at the TS shim directory and at `sql/migrations/` for SQL file lookup.
+- `sql/migrations/` holds the SQL humans review; `migrations/` holds the TS shim that node-pg-migrate imports. The shim reads the SQL files via `fs.readFileSync` — node-pg-migrate itself only knows about the shim directory.
+- `.node-pg-migrate.json` points node-pg-migrate at the TS shim directory only (`migrationsDir: "migrations"`). The actual SQL files are loaded by the shim at runtime.
 - `.env.test.example` documents the `DATABASE_URL_TEST` shape; the real `.env.test` is git-ignored (covered by the existing `.env.*` rule in `.gitignore`).
 
 ---
@@ -284,9 +284,11 @@ const schema = z.object({
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
-  // eslint-disable-next-line no-console
-  console.error('Invalid environment:', parsed.error.flatten().fieldErrors);
-  throw new Error('Environment validation failed; see errors above.');
+  const fieldErrors = parsed.error.flatten().fieldErrors;
+  console.error('Invalid environment:', fieldErrors);
+  throw new Error(
+    `Environment validation failed: ${JSON.stringify(fieldErrors)}`,
+  );
 }
 
 export const env = parsed.data;
